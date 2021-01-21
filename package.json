@@ -1,0 +1,24 @@
+{
+  "name": "xmlconvertor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Marshumov/xmlConvertor.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Marshumov/xmlConvertor/issues"
+  },
+  "homepage": "https://github.com/Marshumov/xmlConvertor#readme",
+  "dependencies": {
+    "camaro": "^6.0.4",
+    "json2csv": "^5.0.3",
+    "xml-js": "^1.6.11"
+  }
+}
