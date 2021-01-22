@@ -3,6 +3,9 @@ const { parse } = require('json2csv');
 const axios = require('axios');
 var convert = require('xml-js');
 const { transform, prettyPrint } = require('camaro')
+const timeChange = 600000;
+let type = '';
+
 const xml =
 '<?xml version="1.0" encoding="utf-8"?>' +
 '<request><dataswitch>' +
@@ -103,25 +106,29 @@ async function deviceInfo(token) {
 }
 */
 async function monitoringInfo(token) {
+//  console.log("Проверка статуса monitoringInfo");
+  //console.log('token', token);
   axios.defaults.headers.common['__RequestVerificationToken'] = token[0].token;
   await axios.get('http://192.168.8.1/api/monitoring/status')
-  .then(function (response) {
-      statusInfo = response.data
+  .then( function (response) {
+      statusInfo =  response.data
+//      console.log("Проверка статуса monitoringInfo, statusInfo  = " + statusInfo);
   })
   .catch(function (error) {
-    // handle error
     console.log(error);
   })
   .then(function (result) {
-    // always executed
   });
 }
-async function onLTE(token) {
-  axios.defaults.headers.common['__RequestVerificationToken'] = token[0].token;
+async function onLTE() {
+  //console.log('Запускаю LTE');
+  await updateToken();
+  let resultToken = await transform(token, tokenSchema)
+  axios.defaults.headers.common['__RequestVerificationToken'] = resultToken[0].token;
   await axios.post('http://192.168.8.1/api/net/net-mode', lteXML)
-    .then(function (response) {
-    //  const result = transform(response.data, infoMobileSchema)
-      console.log(response.data);
+    .then(async function (response) {
+    //  console.log('LTE активирован, идет смена на 3g, ждем 10 сек');
+      setTimeout(async ()=> { changeTimeActiveted('lte')}, 6000)
     })
     .catch(function (error) {
       // handle error
@@ -131,11 +138,16 @@ async function onLTE(token) {
       // always executed
     });
 }
-async function on3g(token) {
-  axios.defaults.headers.common['__RequestVerificationToken'] = token[0].token;
+async function on3g() {
+//  console.log('Запускаю 3g');
+  await updateToken();
+  let resultToken = await transform(token, tokenSchema)
+  axios.defaults.headers.common['__RequestVerificationToken'] = resultToken[0].token;
   await axios.post('http://192.168.8.1/api/net/net-mode', hspaXML)
-    .then(function (response) {
-      console.log(response.data);
+    .then(async function (response) {
+    //  console.log('3g активирован, идет смена на LTE, ждем 10 сек');
+      setTimeout(async ()=> { changeTimeActiveted('hspa')}, 6000)
+
     })
     .catch(function (error) {
       // handle error
@@ -145,25 +157,62 @@ async function on3g(token) {
       // always executed
     });
 }
+async function changeTimeActiveted(typeInternet) {
+//  console.log('changeTimeActiveted');
+  if (typeof typeInternet != undefined) {
+      type = typeInternet;
+  }
+  else typeInternet = type;
+  await updateToken();
+  let resultToken = await transform(token, tokenSchema)
+  await monitoringInfo(resultToken);
+  //console.log("Парсинг статус инфо", statusInfo);
+  let result =  await transform(statusInfo, monitoringSchema)
+//  console.log("statusInfo = ", result[0]);
+  if (result[0].connectionstatus==901) {
+    //console.log('result.connectionstatus==901');
+    if (typeInternet=='lte') {
+    //  console.log('Начинается новый цикл LTE');
+      setTimeout(on3g, timeChange)
+    }
+    else if (typeInternet=='hspa') {
+      await onLTE(token)
+    }
+  }
+  else if(result[0].connectionstatus==902) {
+    //console.log('result.connectionstatus==902');
+    waiting(typeInternet);
+  }
+}
+function waiting (typeInternet) {
+  //console.log('ждем 3 секунды для проверки статуса');
+  setTimeout(async ()=> { changeTimeActiveted(typeInternet)}, 3000)
+}
+
 async function chengeIP(token) {
+  //console.log('Начинаю менять ip');
   await monitoringInfo(token);
   let result =  await transform(statusInfo, monitoringSchema)
-  console.log(result);
-//  await on3g(token);
-//  await monitoringInfo(token);
-//  await onLTE(token);
-//  await deviceInfo(token);
+//  console.log('currentnetworktype', result[0].currentnetworktype);
+  let currentnetworktype = result[0].currentnetworktype
+//  console.log(currentnetworktype);
+  if(currentnetworktype==41) {
+    await onLTE(token);
+  }
+  else if(currentnetworktype==46) {
+    await on3g(token);
+  }
 }
-function checkNotifications() {
-  //http://192.168.8.1/api/monitoring/check-notifications
+
+async function updateToken() {
+  await getToken();
+  let result = await transform(token, tokenSchema)
+//  console.log('Происходит обновление токена', result);
 }
+
 ;(async function () {
-//
+  // console.log('Старт программы');
    await getToken();
-  //console.log('token', token);
    let result = await transform(token, tokenSchema)
-  //     console.log(result)
-//  await disconnect(result)
-//  await deviceInfo(result)
-  await chengeIP(result)
+   chengeIP(result)
 })()

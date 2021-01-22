@@ -19,6 +19,7 @@
   "dependencies": {
     "camaro": "^6.0.4",
     "json2csv": "^5.0.3",
+    "pm2": "^4.5.1",
     "xml-js": "^1.6.11"
   }
 }
