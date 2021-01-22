@@ -20,6 +20,7 @@ const hspaXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>02
 
 let token = '';
 let statusInfo = '';
+let ip = '';
 async function getToken() {
   await axios.get('http://192.168.8.1/api/webserver/token')
   .then(function (response) {
@@ -138,6 +139,19 @@ async function onLTE() {
       // always executed
     });
 }
+ async function checkIP() {
+   await axios.get('https://marshumovglass.com/ip.php')
+  .then(async function (response) {
+    ip = response.data.ip;
+  })
+  .catch(function (error) {
+    console.log(error);
+  })
+  .then(function() {
+
+  });
+}
+console.log(checkIP());
 async function on3g() {
 //  console.log('Запускаю 3g');
   await updateToken();
@@ -172,7 +186,9 @@ async function changeTimeActiveted(typeInternet) {
   if (result[0].connectionstatus==901) {
     //console.log('result.connectionstatus==901');
     if (typeInternet=='lte') {
-    //  console.log('Начинается новый цикл LTE');
+      console.log('Начинается новый цикл LTE');
+      await checkIP();
+      console.log('Новый ip адрес: ' + ip);
       setTimeout(on3g, timeChange)
     }
     else if (typeInternet=='hspa') {
@@ -212,6 +228,8 @@ async function updateToken() {
 
 ;(async function () {
   // console.log('Старт программы');
+   await checkIP();
+   console.log('Ваш текущий ip: ' + ip);
    await getToken();
    let result = await transform(token, tokenSchema)
    chengeIP(result)
