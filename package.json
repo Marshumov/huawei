@@ -17,9 +17,12 @@
   },
   "homepage": "https://github.com/Marshumov/xmlConvertor#readme",
   "dependencies": {
+    "axios": "^0.21.1",
     "camaro": "^6.0.4",
+    "https": "^1.0.0",
     "json2csv": "^5.0.3",
     "pm2": "^4.5.1",
+    "socks-proxy-agent": "^5.0.0",
     "xml-js": "^1.6.11"
   }
 }
