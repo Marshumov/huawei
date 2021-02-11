@@ -7,18 +7,22 @@ const SocksProxyAgent = require('socks-proxy-agent');
 var https = require('https');
 //const socks = require('socksv5');
 
-const lteXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
+//const lteXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
+//const hspaXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>02</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
+
+const lteXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>0302</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
 const hspaXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>02</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
 
 let token = '';
 let statusInfo = '';
 let ip = '';
-const timeChange = 600000;
+//const timeChange = 600000;
+const timeChange = 60000;
 let type = '';
 
 
 async function getToken() {
-  await axios.get('http://192.168.8.1/api/webserver/token')
+  await axios.get('http://192.168.8.1/api/webserver/SesTokInfo')
   .then(function (response) {
   //  console.log(response.data);
      token =  response.data;
@@ -35,7 +39,8 @@ async function getToken() {
 
 
 const tokenSchema = ['response', {
-    token: 'token',
+    token: 'TokInfo',
+    SesInfo:'SesInfo'
 }]
 const infoMobileSchema = ['response', {
     productFamily: 'ProductFamily',
@@ -67,6 +72,7 @@ async function monitoringInfo(token) {
 //  console.log("Проверка статуса monitoringInfo");
   //console.log('token', token);
   axios.defaults.headers.common['__RequestVerificationToken'] = token[0].token;
+  axios.defaults.headers.common['Cookie'] = token[0].SesInfo;
   await axios.get('http://192.168.8.1/api/monitoring/status')
   .then( function (response) {
       statusInfo =  response.data
@@ -81,8 +87,10 @@ async function monitoringInfo(token) {
 async function onLTE() {
   console.log('Запускаю LTE');
   await updateToken();
-  let resultToken = await transform(token, tokenSchema)
+  let resultToken = await transform(token, tokenSchema);
+  console.log(resultToken);
   axios.defaults.headers.common['__RequestVerificationToken'] = resultToken[0].token;
+  axios.defaults.headers.common['Cookie'] = resultToken[0].SesInfo;
   await axios.post('http://192.168.8.1/api/net/net-mode', lteXML)
     .then(async function (response) {
     //  console.log('LTE активирован, идет смена на 3g, ждем 10 сек');
@@ -100,11 +108,16 @@ async function onLTE() {
 async function on3g() {
   console.log('Запускаю 3g');
   await updateToken();
-  let resultToken = await transform(token, tokenSchema)
+  let resultToken = await transform(token, tokenSchema);
+  console.log('resultToken', resultToken);
   axios.defaults.headers.common['__RequestVerificationToken'] = resultToken[0].token;
+  axios.defaults.headers.common['Cookie'] = resultToken[0].SesInfo;
+  console.log('token[0]', token[0]);
+  console.log('3 g до сюда работает');
   await axios.post('http://192.168.8.1/api/net/net-mode', hspaXML)
     .then(async function (response) {
-    //  console.log('3g активирован, идет смена на LTE, ждем 10 сек');
+      console.log('3g активирован, идет смена на LTE, ждем 10 сек');
+      console.log('3g статус', response.data);
       setTimeout(async ()=> { changeTimeActiveted('hspa')}, 6000)
 
     })
