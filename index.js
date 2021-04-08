@@ -5,24 +5,76 @@ var convert = require('xml-js');
 const { transform, prettyPrint } = require('camaro')
 const SocksProxyAgent = require('socks-proxy-agent');
 var https = require('https');
-//const socks = require('socksv5');
 
-//const lteXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
+
+//const lteXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>0302</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
+const lteXML =  '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>03</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>7FFFFFFFFFFFFFFF</LTEBand></request>'
+const hspaXML =  '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>02</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>7FFFFFFFFFFFFFFF</LTEBand></request>'
 //const hspaXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>02</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
 
-const lteXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>0302</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
-const hspaXML = '<?xml version: "1.0" encoding="UTF-8"?><request><NetworkMode>02</NetworkMode><NetworkBand>3FFFFFFF</NetworkBand><LTEBand>800C5</LTEBand></request>';
+const tokenSchema = ['response', {
+    token: 'TokInfo',
+    SesInfo:'SesInfo'
+}]
+const infoMobileSchema = ['response', {
+    productFamily: 'ProductFamily',
+}]
+const monitoringSchema = ['response', {
+    wanipaddress: 'WanIPAddress',
+    connectionstatus: 'ConnectionStatus',
+    currentnetworktype: 'CurrentNetworkType'
+}]
 
-let token = '';
-let statusInfo = '';
-let ip = '';
-//const timeChange = 600000;
-const timeChange = 60000;
-let type = '';
+const modems = [
+  {
+    ip: 'http://192.168.11.1',
+    time: 600000,
+    log: 'logAll'
+  },
+  {
+    ip: 'http://192.168.12.1',
+    time: 600000,
+    log: 'logAll'
+  },
+  {
+    ip: 'http://192.168.13.1',
+    time: 600000,
+    log: 'onlyReplace'
+  },
+  {
+    ip: 'http://192.168.14.1',
+    time: 600000,
+    log: 'onlyReplace'
+  },
+  {
+    ip: 'http://192.168.17.1',
+    time: 600000,
+    log: 'onlyReplace'
+  },
+  {
+    ip: 'http://192.168.16.1',
+    time: 600000,
+    log: 'onlyReplace'
+  }
+]
 
+
+
+
+function start(modems) {
+  console.log(modems);
+  let modem = modems.ip;
+  let timeChange = modems.time;
+  let log = modems.log;
+
+  console.log(modem);
+  let token = '';
+  let statusInfo = '';
+  let ip = '';
+  let type = '';
 
 async function getToken() {
-  await axios.get('http://192.168.8.1/api/webserver/SesTokInfo')
+  await axios.get(modem + '/api/webserver/SesTokInfo')
   .then(function (response) {
   //  console.log(response.data);
      token =  response.data;
@@ -38,19 +90,6 @@ async function getToken() {
 }
 
 
-const tokenSchema = ['response', {
-    token: 'TokInfo',
-    SesInfo:'SesInfo'
-}]
-const infoMobileSchema = ['response', {
-    productFamily: 'ProductFamily',
-}]
-const monitoringSchema = ['response', {
-    wanipaddress: 'WanIPAddress',
-    connectionstatus: 'ConnectionStatus',
-    currentnetworktype: 'CurrentNetworkType'
-}]
-
 async function checkIP() {
   await axios.get('http://serviceanalytics.ru/ip.php', {
     proxy: {
@@ -60,7 +99,10 @@ async function checkIP() {
   })
   .then(function (response) {
     ip = response.data.ip;
-    console.log('Ваш ip: '+ response.data.ip);
+    if (log == 'logAll') {
+          console.log('Ваш ip: '+ response.data.ip);
+    }
+
   })
   .catch(function (error) {
     // handle error
@@ -69,14 +111,24 @@ async function checkIP() {
 }
 
 async function monitoringInfo(token) {
+  if (log == 'logAll') {
+    console.log('выполняю monitoringInfo');
+  }
 //  console.log("Проверка статуса monitoringInfo");
   //console.log('token', token);
   axios.defaults.headers.common['__RequestVerificationToken'] = token[0].token;
   axios.defaults.headers.common['Cookie'] = token[0].SesInfo;
-  await axios.get('http://192.168.8.1/api/monitoring/status')
+  if (log == 'logAll') {
+    console.log('Токен  установлен token= ' +token[0].token);
+    console.log('SesInfo установлен SesInfo= ' +token[0].SesInfo);
+    console.log(modem + '/api/monitoring/status');
+  }
+  await axios.get(modem + '/api/monitoring/status')
   .then( function (response) {
       statusInfo =  response.data
-//      console.log("Проверка статуса monitoringInfo, statusInfo  = " + statusInfo);
+      if (log == 'logAll') {
+        console.log("Проверка статуса monitoringInfo, statusInfo  = " + statusInfo);
+      }
   })
   .catch(function (error) {
     console.log(error);
@@ -85,13 +137,17 @@ async function monitoringInfo(token) {
   });
 }
 async function onLTE() {
-  console.log('Запускаю LTE');
+  if (log == 'logAll'||log == 'onlyReplace') {
+    console.log('Запускаю LTE на модеме ' + modem);
+  }
   await updateToken();
   let resultToken = await transform(token, tokenSchema);
-  console.log(resultToken);
+  if (log == 'logAll') {
+    console.log(resultToken);
+  }
   axios.defaults.headers.common['__RequestVerificationToken'] = resultToken[0].token;
   axios.defaults.headers.common['Cookie'] = resultToken[0].SesInfo;
-  await axios.post('http://192.168.8.1/api/net/net-mode', lteXML)
+  await axios.post(modem + '/api/net/net-mode', lteXML)
     .then(async function (response) {
     //  console.log('LTE активирован, идет смена на 3g, ждем 10 сек');
       setTimeout(async ()=> { changeTimeActiveted('lte')}, 6000)
@@ -106,18 +162,26 @@ async function onLTE() {
 }
 
 async function on3g() {
-  console.log('Запускаю 3g');
+  if (log == 'logAll'||log == 'onlyReplace') {
+    console.log('Запускаю 3g на модеме '+  + modem);
+  }
   await updateToken();
   let resultToken = await transform(token, tokenSchema);
-  console.log('resultToken', resultToken);
+  if (log == 'logAll') {
+    console.log('resultToken', resultToken);
+  }
   axios.defaults.headers.common['__RequestVerificationToken'] = resultToken[0].token;
   axios.defaults.headers.common['Cookie'] = resultToken[0].SesInfo;
-  console.log('token[0]', token[0]);
-  console.log('3 g до сюда работает');
-  await axios.post('http://192.168.8.1/api/net/net-mode', hspaXML)
+  if (log == 'logAll') {
+    console.log('token[0]', token[0]);
+    console.log('3 g до сюда работает');
+  }
+  await axios.post(modem + '/api/net/net-mode', hspaXML)
     .then(async function (response) {
-      console.log('3g активирован, идет смена на LTE, ждем 10 сек');
-      console.log('3g статус', response.data);
+      if (log == 'logAll') {
+        console.log('3g активирован, идет смена на LTE, ждем 10 сек');
+        console.log('3g статус', response.data);
+      }
       setTimeout(async ()=> { changeTimeActiveted('hspa')}, 6000)
 
     })
@@ -138,23 +202,35 @@ async function changeTimeActiveted(typeInternet) {
   await updateToken();
   let resultToken = await transform(token, tokenSchema)
   await monitoringInfo(resultToken);
-  //console.log("Парсинг статус инфо", statusInfo);
+  if (log == 'logAll') {
+    console.log("Парсинг статус инфо", statusInfo);
+  }
   let result =  await transform(statusInfo, monitoringSchema)
-//  console.log("statusInfo = ", result[0]);
-  if (result[0].connectionstatus==901) {
-    //console.log('result.connectionstatus==901');
+  if (log == 'logAll') {
+    console.log("statusInfo = ", result[0]);
+  }
+  if (result[0].connectionstatus==900||result[0].connectionstatus==901) {
+    if (log == 'logAll') {
+      console.log('работаем result.connectionstatus= '+ result[0].connectionstatus);
+    }
     if (typeInternet=='lte') {
-      console.log('Начинается новый цикл LTE');
+    //  console.log('Начинается новый цикл LTE');
       //await checkIP();
+      if (log == 'logAll'||log == 'onlyReplace') {
+        console.log("Отдых между циклом на модеме "+ modem+". Отдых составляет "+ timeChange +" мс");
+      }
       setTimeout(on3g, timeChange)
     }
     else if (typeInternet=='hspa') {
       await onLTE(token)
     }
   }
-  else if(result[0].connectionstatus==902) {
+  else if(result[0].connectionstatus==902||result[0].connectionstatus==901) {
     //console.log('result.connectionstatus==902');
     waiting(typeInternet);
+  }
+  else {
+    console.log('ОШИБКА, connectionstatus =' + result[0].connectionstatus);
   }
 }
 function waiting (typeInternet) {
@@ -163,7 +239,9 @@ function waiting (typeInternet) {
 }
 
 async function chengeIP(token) {
-  console.log('Начинаю менять ip');
+  if (log == 'logAll'||log == 'onlyReplace') {
+    console.log('Начинаю менять ip на модеме '+  + modem);
+  }
   await monitoringInfo(token);
   let result =  await transform(statusInfo, monitoringSchema)
   let currentnetworktype = result[0].currentnetworktype
@@ -175,14 +253,19 @@ async function chengeIP(token) {
     await on3g(token);
   }
   else {
-    console.log('Ошибка статуса работы. currentnetworktype = ' + currentnetworktype)
+    if (log == 'logAll') {
+      console.log('Ошибка статуса работы. currentnetworktype = ' + currentnetworktype +  + modem)
+    }
     await on3g(token);
   }
 }
 
 async function updateToken() {
   await getToken();
-  let result = await transform(token, tokenSchema)
+  let result = await transform(token, tokenSchema);
+  if (log == 'logAll') {
+    console.log("очередной апдейт токена "+ result)
+  }
 }
 
 ;(async function () {
@@ -190,9 +273,29 @@ async function updateToken() {
 //   await checkIP();
 //   console.log('Ваш текущий ip: ' + ip);
    await getToken();
+
    let result = await transform(token, tokenSchema)
-  chengeIP(result)
+    if (log == 'logAll') {
+     console.log('Получение первого токена result updateToken = ' + result);
+    }
+    chengeIP(result)
+
 })()
+
+};
+
+for (var i = 0; i < modems.length; i++) {
+  console.log('отгружаю  ip',modems[i] );
+  let b = modems[i]
+  setTimeout(function () {
+    start(b);
+  }, 1000);
+}
+
+
+
+
+
 
 /*
 const xml =
