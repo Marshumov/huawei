@@ -29,12 +29,12 @@ const modems = [
   {
     ip: 'http://192.168.11.1',
     time: 600000,
-    log: 'logAll'
+    log: 'onlyReplace'
   },
   {
     ip: 'http://192.168.12.1',
     time: 600000,
-    log: 'logAll'
+    log: 'onlyReplace'
   },
   {
     ip: 'http://192.168.13.1',
@@ -289,7 +289,7 @@ for (var i = 0; i < modems.length; i++) {
   let b = modems[i]
   setTimeout(function () {
     start(b);
-  }, 1000);
+  }, 5000);
 }
 
 
