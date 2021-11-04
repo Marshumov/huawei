@@ -30,31 +30,6 @@ const modems = [
     ip: 'http://192.168.11.1',
     time: 600000,
     log: 'onlyReplace'
-  },
-  {
-    ip: 'http://192.168.12.1',
-    time: 600000,
-    log: 'onlyReplace'
-  },
-  {
-    ip: 'http://192.168.13.1',
-    time: 600000,
-    log: 'onlyReplace'
-  },
-  {
-    ip: 'http://192.168.14.1',
-    time: 600000,
-    log: 'onlyReplace'
-  },
-  {
-    ip: 'http://192.168.17.1',
-    time: 600000,
-    log: 'onlyReplace'
-  },
-  {
-    ip: 'http://192.168.16.1',
-    time: 600000,
-    log: 'onlyReplace'
   }
 ]
 
@@ -62,12 +37,8 @@ const modems = [
 
 
 function start(modems) {
-  console.log(modems);
   let modem = modems.ip;
-  let timeChange = modems.time;
-  let log = modems.log;
 
-  console.log(modem);
   let token = '';
   let statusInfo = '';
   let ip = '';
@@ -76,16 +47,13 @@ function start(modems) {
 async function getToken() {
   await axios.get(modem + '/api/webserver/SesTokInfo')
   .then(function (response) {
-  //  console.log(response.data);
      token =  response.data;
-    // return response.data;
   })
   .catch(function (error) {
-    // handle error
+
     console.log(error);
   })
   .then(function () {
-    // always executed
   });
 }
 
@@ -94,36 +62,8 @@ async function checkIP() {
 
 }
 
-async function monitoringInfo(token) {
-  if (log == 'logAll') {
-    console.log('выполняю monitoringInfo');
-  }
-//  console.log("Проверка статуса monitoringInfo");
-  //console.log('token', token);
-  axios.defaults.headers.common['__RequestVerificationToken'] = token[0].token;
-  axios.defaults.headers.common['Cookie'] = token[0].SesInfo;
-  if (log == 'logAll') {
-    console.log('Токен  установлен token= ' +token[0].token);
-    console.log('SesInfo установлен SesInfo= ' +token[0].SesInfo);
-    console.log(modem + '/api/monitoring/status');
-  }
-  await axios.get(modem + '/api/monitoring/status')
-  .then( function (response) {
-      statusInfo =  response.data
-      if (log == 'logAll') {
-        console.log("Проверка статуса monitoringInfo, statusInfo  = " + statusInfo);
-      }
-  })
-  .catch(function (error) {
-    console.log(error);
-  })
-  .then(function (result) {
-  });
-}
+
 async function onLTE() {
-  if (log == 'logAll'||log == 'onlyReplace') {
-    console.log('Запускаю LTE на модеме ' + modem);
-  }
   await updateToken();
   let resultToken = await transform(token, tokenSchema);
   if (log == 'logAll') {
